@@ -85,12 +85,3 @@ routes = [
 ]
 ```
 
-## 📝 与 Python 版的区别
-
-| 项目 | Python (FastAPI) | Workers (JS) |
-|------|-----------------|--------------|
-| 运行环境 | 本地/云服务器 | Cloudflare 边缘网络 |
-| 语言 | Python | JavaScript |
-| 部署 | 需要服务器 | `npm run deploy` 一键 |
-| 费用 | 服务器费用 | 免费 (10万请求/天) |
-| 功能 | 完全一致 | 完全一致 |
