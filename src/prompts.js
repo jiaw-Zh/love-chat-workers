@@ -187,23 +187,24 @@ ${userPersonality}
 
 ${styleInstructions}
 
-## 输出格式
-请严格按以下 JSON 格式输出，不要输出任何其他内容。
-其中 replies 数组中的每一项都必须包含 style（风格名称）、content（回复内容）、tip（回复理由/技巧）。
-此外，请务必返回一个整体的 analysis 和 next_topic。
+## 强制输出格式 (必须严格遵守 JSON)
+请直接输出一个纯 JSON 对象，不要包含任何前导说明、Markdown 语法块或结尾总结。你的整个响应内容必须只能是一个合法的 JSON。
 
+JSON 结构示例：
 {
-    "analysis": "简要解析对方话语背后的潜台词、情绪或当前关系的处境（40字内）",
+    "analysis": "对当下聊天局势的洞察（40字内）",
     "replies": [
         {
             "style": "风格名称",
-            "content": "具体的对话内容（50字内）",
-            "tip": "祖师爷洞察：分析这条回复为什么有效，以及运用的心法"
+            "content": "具体的回复内容",
+            "tip": "心法/技巧解析"
         }
     ],
-    "warnings": ["如果对方话语中有陷阱或高风险信号，在这里给出警告"],
-    "next_topic": "后续如何延续话题或推进关系的建议"
-}`;
+    "warnings": ["如果消息中有坑或风险，请指出，否则为空数组"],
+    "next_topic": "后续如何延续或推进关系的建议"
+}
+
+请确保所有字符串中的特殊字符（如换行、引号）按照 JSON 标准进行转义。`;
 
   if (extraContext) {
     prompt += `\n\n## 额外背景补全\n${extraContext}`;
@@ -239,12 +240,13 @@ async function callAI(baseUrl, apiKey, modelName, systemPrompt, userMessage, sup
     model: modelName,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `对方最新消息：「${userMessage}」\n\n请作为恋爱顾问生成回复建议。` }
+      { role: 'user', content: `对方最新消息：「${userMessage}」\n\n请直接返回 JSON 格式的回复建议：` }
     ],
-    temperature: 0.8,
-    max_tokens: 1500,
+    temperature: 0.7,
+    max_tokens: 2000,
   };
 
+  // 如果 provider 支持，开启强制 JSON 模式（部分模型不开启反而更稳定）
   if (supportsJsonMode) {
     body.response_format = { type: 'json_object' };
   }
@@ -261,20 +263,38 @@ async function callAI(baseUrl, apiKey, modelName, systemPrompt, userMessage, sup
   }
 
   const data = await response.json();
-  const content = data.choices[0].message.content;
+  let content = data.choices[0].message.content.trim();
+
+  // 清洗响应内容（去除 markdown 包装代码块）
+  if (content.startsWith('```')) {
+    content = content.replace(/^```(json)?\s*/, '').replace(/\s*```$/, '');
+  }
 
   try {
     return JSON.parse(content);
-  } catch {
-    // 尝试在返回内容中寻找 JSON 结构
-    const match = content.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
+  } catch (e) {
+    // 深度搜索字符串中的第一个 { 和最后一个 }
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
     
-    // 如果实在不是 JSON，也返回一个结构化的兼容格式
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const potentialJson = content.substring(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(potentialJson);
+      } catch (innerError) {
+        console.error('JSON Parsing failed even after extraction:', innerError);
+      }
+    }
+    
+    // 最终保底：尝试将纯文本转成结构
     return {
-      analysis: 'AI 响应格式解析失败',
-      replies: [{ style: '原始输出', content: content.trim(), tip: '模型未按 JSON 要求返回，请参考此原生响应' }],
-      warnings: ['由于模型响应非标准 JSON，格式可能混乱'],
+      analysis: 'AI 响应解析异常',
+      replies: [{ 
+        style: '原始响应', 
+        content: content.slice(0, 100) + (content.length > 100 ? '...' : ''), 
+        tip: '由于模型返回格式非标准 JSON，暂无法完全解析。请尝试换一个模型或检查 API 设置。' 
+      }],
+      warnings: ['解析失败，原始文本：' + content.slice(0, 50)],
       next_topic: '无法解析建议'
     };
   }
