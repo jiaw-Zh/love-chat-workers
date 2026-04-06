@@ -4,18 +4,19 @@
 
 ## 📁 目录结构
 
-```
-workers/
-├── wrangler.toml        # Cloudflare Workers 配置
-├── package.json         # Node.js 项目配置
-├── prompts/             # Markdown 格式的提示词库（深情祖师爷核心逻辑）
+```text
+.
+├── wrangler.toml        # Cloudflare Workers 配置文件
+├── package.json         # Node.js 项目配置与依赖
+├── .gitignore           # Git 忽略文件
+├── prompts/             # Markdown 格式提示词库（深情祖师爷核心逻辑）
 │   ├── base_persona.md  # 核心人设与底层心法
-│   └── scene_*.md       # 各场景策略（破冰/暧昧/挽回等）
+│   └── scene_*.md       # 破冰/暧昧/挽回等场景策略
 ├── src/
 │   ├── index.js         # Worker 入口 (路由 + API)
-│   └── prompts.js       # Prompt 引擎 (从 Python 移植并支持加载 Markdown)
+│   └── prompts.js       # Prompt 渲染引擎 (解析并加载 Markdown)
 └── static/
-    └── index.html       # Web 界面 (内联到 Worker 中)
+    └── index.html       # 单页 Web 前端系统
 ```
 
 ## 🚀 部署步骤
@@ -26,7 +27,6 @@ workers/
 
 ### 2. 登录 Cloudflare
 ```bash
-cd workers
 npx wrangler login
 ```
 会打开浏览器让你授权。
