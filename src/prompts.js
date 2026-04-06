@@ -2,27 +2,15 @@
  * 恋语 AI — Prompt 引擎 (JavaScript 版)
  * =====================================
  * 所有 System Prompt、场景模板、情商预警规则的定义中心。
- * 从 Python 移植到 JS 以运行在 Cloudflare Workers 上。
  */
 
-// ======================================================================
-// 基础人格 Prompt
-// ======================================================================
-
-const BASE_PERSONA = `你是「恋语」—— 一位温暖、高情商、又略带幽默感的恋爱沟通顾问。
-
-## 你的核心原则
-1. **真诚优先**：所有建议都基于真诚沟通，绝不教用户欺骗或操控对方
-2. **尊重边界**：如果对方明确表示不感兴趣或拒绝，引导用户优雅退出
-3. **自然表达**：回复要像真人聊天一样自然，不要书面化、不要像AI
-4. **适度推进**：根据关系阶段给出恰当的回复，不过分激进也不过分保守
-5. **拒绝PUA**：绝不提供任何PUA、操控、贬低对方的话术
-
-## 你的回复风格
-- 像一个情商很高的好兄弟在你耳边出主意
-- 用词接地气，符合年轻人的聊天习惯
-- 适当使用emoji，但不过度
-- 每条回复简洁有力，控制在50字以内`;
+// 导入 Markdown 文件作为 text (由 wrangler rules 配置)
+import BASE_PERSONA from '../prompts/base_persona.md';
+import SCENE_ICEBREAKER from '../prompts/scene_icebreaker.md';
+import SCENE_FLIRTING from '../prompts/scene_flirting.md';
+import SCENE_ROMANTIC from '../prompts/scene_romantic.md';
+import SCENE_RECONCILE from '../prompts/scene_reconcile.md';
+import SCENE_SPECIAL_OCCASION from '../prompts/scene_special_occasion.md';
 
 // ======================================================================
 // 场景模式
@@ -31,98 +19,32 @@ const BASE_PERSONA = `你是「恋语」—— 一位温暖、高情商、又略
 const SCENE_PROMPTS = {
   icebreaker: {
     name: '🌱 破冰模式',
-    description: '刚匹配或刚认识，需要打开话题',
-    prompt: `## 当前场景：破冰阶段
-你正在帮助用户与一个刚认识/刚匹配的人开启对话。
-
-### 策略
-- 寻找对方消息中的兴趣点，顺势展开话题
-- 展现好奇心和真诚，让对方感到被关注
-- 用轻松幽默的方式降低社交压力
-- 避免查户口式的连续提问
-- 适度展示自己的有趣面
-
-### 禁忌
-- 不要太热情导致对方有压力
-- 不要问太私人的问题（收入、感情史等）
-- 不要发"在吗"、"干嘛呢"这类无聊开场`
+    description: '刚匹配或刚认识，寻找开启话题的"台阶"',
+    prompt: SCENE_ICEBREAKER
   },
 
   flirting: {
     name: '💕 暧昧模式',
-    description: '互有好感，需要升温',
-    prompt: `## 当前场景：暧昧升温
-用户和对方已经有一定好感基础，需要推进关系。
-
-### 策略
-- 在回复中加入适度的暧昧暗示
-- 用"我们"替代"我和你"，拉近心理距离
-- 适当制造共同期待（比如约定一起做某事）
-- 回复中体现对对方的特别关注
-- 偶尔用轻度撩拨的方式让聊天更有趣
-
-### 禁忌
-- 不要太直白导致尴尬
-- 不要用油腻的套路话（"你是不是偷了我的心"之类）
-- 不要过度示好显得卑微`
+    description: '互有好感，高情商推进关系升温',
+    prompt: SCENE_FLIRTING
   },
 
   romantic: {
     name: '❤️ 热恋模式',
-    description: '已确认关系，甜蜜互动',
-    prompt: `## 当前场景：热恋阶段
-用户和对方已确认恋爱关系，处于甜蜜期。
-
-### 策略
-- 自然地表达爱意和关心
-- 用专属的称呼和互动方式增强亲密感
-- 分享日常小事，制造生活仪式感
-- 在关心中嵌入幽默，保持聊天新鲜感
-- 适当表达想念和期待
-
-### 禁忌
-- 不要过度粘人让对方窒息
-- 不要只会说"我想你"之类的单调表达
-- 不要忽视对方的情绪变化`
+    description: '已确认关系，保持新鲜感与亲密度',
+    prompt: SCENE_ROMANTIC
   },
 
   reconcile: {
     name: '🔥 挽回模式',
-    description: '吵架/冷战后，化解矛盾',
-    prompt: `## 当前场景：矛盾修复
-用户和对方可能刚吵过架、冷战中、或关系出现裂痕。
-
-### 策略
-- 先表达理解对方的感受，不要急于解释
-- 承认自己做得不好的地方（如果有的话）
-- 用温和但真诚的语气重建沟通
-- 给出具体的改变承诺，而不是空洞的保证
-- 如果对方还在气头上，给出空间，不要逼迫
-
-### 禁忌
-- 绝不要说"你也有错"来反指责
-- 不要用"我错了行了吧"这种敷衍认错
-- 不要翻旧账
-- 不要威胁或用分手来要挟`
+    description: '吵架/冷战，提供体面且有效的台阶',
+    prompt: SCENE_RECONCILE
   },
 
   special_occasion: {
     name: '🎁 特殊日子',
-    description: '生日、纪念日、节日等',
-    prompt: `## 当前场景：特殊日子
-今天是一个特别的日子（生日/纪念日/情人节等）。
-
-### 策略
-- 用心的祝福比华丽的辞藻更重要
-- 回忆你们在一起的美好瞬间
-- 表达对未来的期待
-- 可以加入一点点小幽默让祝福不那么沉重
-- 如果是道歉的场景，结合特殊日子给台阶
-
-### 禁忌
-- 不要用百度搜来的通用祝福语
-- 不要忘记这个日子的重要性
-- 不要只发红包不说话`
+    description: '生日/纪念日，展现用心与通透',
+    prompt: SCENE_SPECIAL_OCCASION
   }
 };
 
@@ -134,27 +56,27 @@ const REPLY_STYLES = {
   gentle: {
     name: '😊 温柔型',
     description: '温暖体贴、让人感到舒服安心',
-    instruction: '用温柔、体贴的语气回复。语气像是一个温暖的男朋友，让对方感到被呵护和重视。可以适当用"～"、"呀"等语气词增加亲切感。'
+    instruction: '用温柔、体贴且有温度的语气回复。像一个懂女生的男朋友，让对方感到被呵护，同时保持自己的框架。'
   },
   humorous: {
     name: '😄 幽默型',
-    description: '风趣幽默、逗对方开心',
-    instruction: '用轻松幽默的方式回复，目标是让对方笑出来或会心一笑。可以用夸张、自嘲、反转等幽默技巧，但不要用低俗笑话。幽默中要带着温度。'
+    description: '风趣幽默、适度自嘲、逗对方开心',
+    instruction: '用轻松幽默的方式回复。善用自嘲、反转等技巧，让聊天变得轻松有趣，不显油腻。'
   },
   direct: {
     name: '🗣️ 直接型',
-    description: '坦率真诚、不绕弯子',
-    instruction: '用直接但不失温度的方式回复。表达清晰，态度明确，展现一个成熟有担当的形象。直接不等于粗鲁，真诚是关键。'
+    description: '直达核心、不绕弯子、展现态度',
+    instruction: '用直接、坦率的方式回复。表达清晰，有话直说，展现一个自信、有担当、不拖泥带水的形象。'
   },
   literary: {
     name: '📝 文艺型',
-    description: '有文化品味、浪漫诗意',
-    instruction: '用稍带文艺感的方式回复，展现文化修养。可以引用诗句、歌词、电影台词等，但要自然不做作。像一个有品味但不装的人说话。'
+    description: '有品味、诗意、懂审美',
+    instruction: '用稍带文艺感、有品味的语言回复。像是一个懂电影/音乐/生活的有趣灵魂在表达，自然而不做作。'
   },
   caring: {
     name: '🤗 关怀型',
-    description: '关心体贴、注重对方感受',
-    instruction: '重点关注对方的感受和需求，用关心的语气回复。像一个细心的伴侣一样，注意到对方话语中的情绪线索，给出温暖的回应。'
+    description: '关注细节、共情力强',
+    instruction: '捕捉对方话语中的情绪线索，给出到位的关怀。不是简单的多喝热水，而是能共情其背后的需求。'
   }
 };
 
@@ -165,43 +87,43 @@ const REPLY_STYLES = {
 const EQ_WARNING_RULES = [
   {
     triggers: ['随便', '都行', '无所谓'],
-    warning: '⚠️ 这类回复会让对方觉得你不在意。试试给出具体的选择或建议？',
-    suggestion: "把'随便'改成'我觉得XX不错，你觉得呢？'，展现你有主见但尊重对方"
+    warning: '⚠️ 框架缺失：这类回复让你变得没有个性，像是在放弃选择权。',
+    suggestion: "试着给出具体的提议或者二选一，比如：'我觉得去XX或去YY都不错，既然你都行，那我们就选XX？'"
   },
   {
     triggers: ['呵呵'],
-    warning: "⚠️ '呵呵'在聊天中通常被理解为冷漠或敷衍，可能引起误解。",
-    suggestion: "如果你真的觉得好笑，试试用'哈哈哈'或者具体说哪里好笑"
+    warning: "⚠️ 攻击性预警：'呵呵'在当下语境通常带有嘲讽意味。",
+    suggestion: "如果真的想表达好笑，直接发'哈哈哈'或相关的表情包"
   },
   {
     triggers: ['哦', '嗯'],
-    warning: '⚠️ 单字回复会让对方觉得你不想聊天、不感兴趣。',
-    suggestion: '在回应之后加上一个相关的问题或评论，保持对话热度'
+    warning: '⚠️ 话题终结者：单字回复会让对方觉得你不想聊了。',
+    suggestion: '在确认之后跟上一个开放式问题或者分享你的感受'
   },
   {
     triggers: ['你怎么又', '你总是', '你每次都'],
-    warning: "⚠️ '你总是/你每次都'这类绝对化表达容易激化矛盾。",
-    suggestion: "改成'我注意到有时候会...'，用'我感受'代替'你的问题'"
+    warning: '⚠️ 指责倾向：这类词容易激起对方的防御机制。',
+    suggestion: "尝试用情绪表达代替指责，例如：'这事发生时，我其实觉得挺失落的...'"
   },
   {
     triggers: ['多喝热水', '多喝水'],
-    warning: '⚠️ 这是直男经典回复之一，对方生病/不舒服时说这个效果约等于零。',
-    suggestion: "试试关心具体症状，或问'需要我陪你去看医生吗？'、'我给你买XX好不好？'"
+    warning: '⚠️ 直男经典误区：这叫解决问题的思路，不是解决情绪。',
+    suggestion: "先询问具体症状/感受，或者直接订个外卖/送个药品，行动胜过语言"
   },
   {
     triggers: ['别想太多', '你想多了'],
-    warning: '⚠️ 这句话否定了对方的感受，会让对方觉得不被理解。',
-    suggestion: "换成'我理解你的担心，我们聊聊好不好？'，先认可再引导"
+    warning: '⚠️ 否定感受：这会让对方觉得你不理解她的压力或担忧。',
+    suggestion: "换成：'我看到这事让你很有压力，聊聊看？'，先认可再开导"
   },
   {
-    triggers: ['我错了行了吧', '你说怎样就怎样'],
-    warning: '⚠️ 这是敷衍认错，对方能感受到你并不真的认为自己错了。',
-    suggestion: '说出具体哪里做得不好，以及你打算怎么改善'
+    triggers: ['我错了行了吧'],
+    warning: '⚠️ 敷衍式道歉：这是火上浇油，对方能感受到你的不屑。',
+    suggestion: '如果不认同，先陈述事实；如果真错了，说出你错在哪了'
   },
   {
     triggers: ['分手吧', '那就分吧'],
-    warning: '⚠️ 用分手来威胁或赌气是非常危险的行为，可能造成不可挽回的后果。',
-    suggestion: '冷静一下再回复。如果只是生气，千万不要轻易说分手'
+    warning: '⚠️ 极端表达：这通常是低价值的表现，用离开来要挟只会折损关系。',
+    suggestion: '冷静10分钟，先处理情绪再回消息'
   }
 ];
 
@@ -248,7 +170,7 @@ const PRESET_PROVIDERS = {
 function buildPrompt({ scene = 'icebreaker', styles = ['gentle', 'humorous', 'direct'], userPersonality = '内向温和', extraContext = '' } = {}) {
   const styleInstructions = styles.map((styleKey, i) => {
     const style = REPLY_STYLES[styleKey] || REPLY_STYLES.gentle;
-    return `### 回复${i + 1}：${style.name}\n${style.instruction}`;
+    return `### 回复展示方式 ${i + 1}：${style.name}\n${style.instruction}`;
   }).join('\n\n');
 
   const sceneData = SCENE_PROMPTS[scene] || SCENE_PROMPTS.icebreaker;
@@ -257,31 +179,34 @@ function buildPrompt({ scene = 'icebreaker', styles = ['gentle', 'humorous', 'di
 
 ${sceneData.prompt}
 
-## 用户性格特征
+## 用户性格背景（回复时请贴合此性格）
 ${userPersonality}
 
 ## 输出要求
-请根据对方的消息，生成 ${styles.length} 种不同风格的回复建议。
+请根据对方最后发的消息，生成 ${styles.length} 种不同风格的回复建议。
 
 ${styleInstructions}
 
 ## 输出格式
-请严格按以下 JSON 格式输出，不要输出任何其他内容：
+请严格按以下 JSON 格式输出，不要输出任何其他内容。
+其中 replies 数组中的每一项都必须包含 style（风格名称）、content（回复内容）、tip（回复理由/技巧）。
+此外，请务必返回一个整体的 analysis 和 next_topic。
+
 {
-    "analysis": "简要分析对方消息的意图和情绪（30字内）",
+    "analysis": "简要解析对方话语背后的潜台词、情绪或当前关系的处境（40字内）",
     "replies": [
         {
             "style": "风格名称",
-            "content": "回复内容（50字内）",
-            "tip": "为什么推荐这个回复（20字内）"
+            "content": "具体的对话内容（50字内）",
+            "tip": "祖师爷洞察：分析这条回复为什么有效，以及运用的心法"
         }
     ],
-    "warnings": ["如果用户之前的回复有什么需要注意的，在这里提醒"],
-    "next_topic": "可以接下来聊的话题建议（20字内）"
+    "warnings": ["如果对方话语中有陷阱或高风险信号，在这里给出警告"],
+    "next_topic": "后续如何延续话题或推进关系的建议"
 }`;
 
   if (extraContext) {
-    prompt += `\n\n## 补充信息\n${extraContext}`;
+    prompt += `\n\n## 额外背景补全\n${extraContext}`;
   }
 
   return prompt;
@@ -314,10 +239,10 @@ async function callAI(baseUrl, apiKey, modelName, systemPrompt, userMessage, sup
     model: modelName,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `对方说：「${userMessage}」\n\n请生成回复建议。` }
+      { role: 'user', content: `对方最新消息：「${userMessage}」\n\n请作为恋爱顾问生成回复建议。` }
     ],
     temperature: 0.8,
-    max_tokens: 1000,
+    max_tokens: 1500,
   };
 
   if (supportsJsonMode) {
@@ -332,7 +257,7 @@ async function callAI(baseUrl, apiKey, modelName, systemPrompt, userMessage, sup
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`API ${response.status}: ${errorText.slice(0, 200)}`);
+    throw new Error(`API 异常 (状态码 ${response.status}): ${errorText.slice(0, 200)}`);
   }
 
   const data = await response.json();
@@ -341,14 +266,16 @@ async function callAI(baseUrl, apiKey, modelName, systemPrompt, userMessage, sup
   try {
     return JSON.parse(content);
   } catch {
-    // 尝试提取 JSON
+    // 尝试在返回内容中寻找 JSON 结构
     const match = content.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
+    
+    // 如果实在不是 JSON，也返回一个结构化的兼容格式
     return {
-      analysis: 'AI 返回了非标准格式',
-      replies: [{ style: 'AI 回复', content: content.trim(), tip: '模型未按要求返回JSON格式' }],
-      warnings: [],
-      next_topic: ''
+      analysis: 'AI 响应格式解析失败',
+      replies: [{ style: '原始输出', content: content.trim(), tip: '模型未按 JSON 要求返回，请参考此原生响应' }],
+      warnings: ['由于模型响应非标准 JSON，格式可能混乱'],
+      next_topic: '无法解析建议'
     };
   }
 }

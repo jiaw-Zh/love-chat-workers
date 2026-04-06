@@ -7,9 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 preview_urls = true
 
-# HTML 文件作为模块导入
+# 资源文件作为模块导入
 rules = [
-  { type = "Text", globs = ["**/*.html"], fallthrough = true }
+  { type = "Text", globs = ["**/*.html", "**/*.md"], fallthrough = true }
 ]
 
 # 环境变量（可选，也可以在 Cloudflare Dashboard 中设置）
